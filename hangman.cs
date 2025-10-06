@@ -1,229 +1,188 @@
-// Program.cs
-// Hangman Console Game - MVC + OOP
-// Compatible with .NET Core / .NET 5+
-
-using System;
+﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 
 namespace HangmanMVC
 {
-    // -----------------------
-    // MODEL
-    // -----------------------
-    public class GameModel
+    // ======================== MODEL ========================
+    class HangmanModel
     {
-        private readonly List<string> _wordBank = new List<string>
-        {
-            "computer", "hangman", "architecture", "programming", "variable",
-            "function", "inheritance", "polymorphism", "encapsulation", "abstraction",
-            "console", "application", "randomize", "controller", "view",
-            "model", "exception", "threading", "dictionary", "interface",
-            "delegate", "namespace", "algorithm", "iteration", "recursion"
-        };
+        private List<(string Word, string Clue)> _words;
+        private readonly Random _random = new Random();
 
-        private readonly Random _rnd = new Random();
-
-        public string CurrentWord { get; private set; } = string.Empty;
-        public char[] Revealed { get; private set; } = new char[0];
-        public HashSet<char> CorrectGuesses { get; } = new HashSet<char>();
-        public HashSet<char> WrongGuesses { get; } = new HashSet<char>();
-        public int MaxWrongAllowed { get; } = 3;
+        public string CurrentWord { get; private set; }
+        public string CurrentClue { get; private set; }
+        public HashSet<char> CorrectGuesses { get; private set; }
+        public HashSet<char> WrongGuesses { get; private set; }
+        public string Revealed => new string(CurrentWord.Select(c => CorrectGuesses.Contains(c) ? c : '_').ToArray());
         public int WrongCount => WrongGuesses.Count;
+
+        public HangmanModel(string csvFilePath)
+        {
+            _words = LoadWordsFromCsv(csvFilePath);
+        }
+
+        private List<(string, string)> LoadWordsFromCsv(string path)
+        {
+            var list = new List<(string, string)>();
+            if (!File.Exists(path))
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"❌ CSV file not found at {path}");
+                Console.ResetColor();
+                Environment.Exit(1);
+            }
+
+            foreach (var line in File.ReadAllLines(path).Skip(1)) // skip header
+            {
+                var parts = line.Split(',');
+                if (parts.Length >= 2)
+                    list.Add((parts[0].Trim().ToLower(), parts[1].Trim()));
+            }
+
+            return list;
+        }
 
         public void StartNewWord()
         {
-            CurrentWord = _wordBank[_rnd.Next(_wordBank.Count)].ToLowerInvariant();
-            Revealed = new string('_', CurrentWord.Length).ToCharArray();
-            CorrectGuesses.Clear();
-            WrongGuesses.Clear();
+            var item = _words[_random.Next(_words.Count)];
+            CurrentWord = item.Word;
+            CurrentClue = item.Clue;
+            CorrectGuesses = new HashSet<char>();
+            WrongGuesses = new HashSet<char>();
         }
 
-        public bool IsLetterInWord(char letter)
+        public bool ApplyGuess(char guess)
         {
-            return CurrentWord.Contains(letter);
-        }
-
-        public bool ApplyGuess(char letter)
-        {
-            letter = char.ToLowerInvariant(letter);
-
-            if (CorrectGuesses.Contains(letter) || WrongGuesses.Contains(letter))
-                return true; // Already guessed - treat as no state change, controller will notify view.
-
-            if (IsLetterInWord(letter))
+            if (CurrentWord.Contains(guess))
             {
-                CorrectGuesses.Add(letter);
-                for (int i = 0; i < CurrentWord.Length; i++)
-                {
-                    if (CurrentWord[i] == letter) Revealed[i] = letter;
-                }
+                CorrectGuesses.Add(guess);
                 return true;
             }
             else
             {
-                WrongGuesses.Add(letter);
+                WrongGuesses.Add(guess);
                 return false;
             }
         }
 
-        public bool IsWon()
-        {
-            return !Revealed.Contains('_');
-        }
-
-        public bool IsLost()
-        {
-            return WrongGuesses.Count >= MaxWrongAllowed;
-        }
+        public bool IsWon() => CurrentWord.All(c => CorrectGuesses.Contains(c));
+        public bool IsLost() => WrongCount >= 3;
     }
 
-    // -----------------------
-    // VIEW
-    // -----------------------
-    public class ConsoleView
+    // ======================== VIEW ========================
+    class ConsoleView
     {
         public void ShowWelcome()
         {
             Console.Clear();
-            
-            Console.WriteLine("       WELCOME TO HANGMAN (MVC OOP)     ");
-           
+            Console.ForegroundColor = ConsoleColor.Magenta;
+            Console.WriteLine("=========================================");
+            Console.WriteLine("       🌸 WELCOME TO HANGMAN 🌸         ");
+            Console.WriteLine("=========================================\n");
+            Console.ResetColor();
             Console.WriteLine("Rules:");
-            Console.WriteLine("- You get up to 3 wrong letter guesses per word.");
             Console.WriteLine("- Guess one letter at a time (a-z).");
-            Console.WriteLine("- After each round you may play again or exit.\n");
+            Console.WriteLine("- Only 3 wrong guesses allowed.");
+            Console.WriteLine("- Press X to exit after each round.\n");
         }
 
-        public void ShowGameState(char[] revealed, IEnumerable<char> wrongGuesses, int wrongCount)
+        public void ShowClue(string clue)
         {
-            Console.WriteLine("\nCurrent word:");
-            Console.WriteLine(" " + string.Join(" ", revealed));
-            Console.WriteLine($"\nWrong guesses [{wrongCount}/3]: {string.Join(", ", wrongGuesses)}\n");
-            ShowHangmanArt(wrongCount);
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine($"\n🔍 Clue: {clue.ToUpperInvariant()}");
+            Console.ResetColor();
         }
 
-        public void ShowHangmanArt(int wrongCount)
+        public void ShowGameState(string revealed, HashSet<char> wrongGuesses, int wrongCount)
         {
-            // 0: nothing, 1: hanger, 2: man under hanger, 3: hanging man (full)
-            switch (wrongCount)
+            Console.WriteLine($"\nWord: {string.Join(" ", revealed.ToUpper().ToCharArray())}");
+            Console.WriteLine($"Wrong guesses ({wrongCount}/3): {string.Join(", ", wrongGuesses)}");
+            ShowHangman(wrongCount);
+        }
+
+        private void ShowHangman(int stage)
+        {
+            switch (stage)
             {
                 case 0:
-                    Console.WriteLine("   ");
+                    Console.WriteLine(""); // nothing
                     break;
                 case 1:
-                    Console.WriteLine("  _______");
-                    Console.WriteLine("  |     |");
-                    Console.WriteLine("  |");
-                    Console.WriteLine("  |");
-                    Console.WriteLine("  |");
-                    Console.WriteLine(" _|_\n");
+                    Console.WriteLine("\n  +---+\n      |\n      |\n      |\n     ===");
                     break;
                 case 2:
-                    Console.WriteLine("  _______");
-                    Console.WriteLine("  |     |");
-                    Console.WriteLine("  |     O");
-                    Console.WriteLine("  |    /");
-                    Console.WriteLine("  |");
-                    Console.WriteLine(" _|_\n");
+                    Console.WriteLine("\n  +---+\n  O   |\n      |\n      |\n     ===");
                     break;
                 case 3:
-                    // final hanging man picture used also in failure banner, but we display here too
-                    Console.WriteLine("  _______");
-                    Console.WriteLine("  |     |");
-                    Console.WriteLine("  |     O");
-                    Console.WriteLine("  |    /|\\");
-                    Console.WriteLine("  |    / \\");
-                    Console.WriteLine(" _|_\n");
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine("\n  +---+\n  O   |\n /|\\  |\n / \\  |\n     ===");
+                    Console.ResetColor();
                     break;
             }
         }
 
-        public void ShowAlreadyGuessed(char letter)
+
+        public string AskForLetter()
         {
-            Console.WriteLine($"You already guessed '{letter}'. Try another letter.");
+            Console.Write("\nEnter a letter: ");
+            return Console.ReadLine();
         }
 
         public void ShowInvalidInput()
         {
-            Console.WriteLine("Invalid input. Please enter a single alphabetic letter (a-z).");
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine("❌ Invalid input. Enter one letter (a-z).");
+            Console.ResetColor();
+        }
+
+        public void ShowAlreadyGuessed(char letter)
+        {
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine($"⚠️ You already guessed '{letter}'. Try another.");
+            Console.ResetColor();
         }
 
         public void ShowSuccessBanner(string word)
         {
             Console.ForegroundColor = ConsoleColor.Green;
-            
-            Console.WriteLine("             CONGRATULATIONS!            ");
-            Console.WriteLine("             YOU SAVED THE MAN           ");
-          
-            Console.WriteLine(GetHappyManArt());
-            Console.WriteLine($"\nThe word was: {word.ToUpperInvariant()}");
+            Console.WriteLine("\n YOU WON! ");
+            Console.WriteLine($"The word was: {word.ToUpper()}\n");
+            Console.WriteLine(@"      \O/        ");
+            Console.WriteLine(@"       |         ");
+            Console.WriteLine(@"      / \        ");
             Console.ResetColor();
         }
+
 
         public void ShowFailureBanner(string word)
         {
             Console.ForegroundColor = ConsoleColor.Red;
-         
-            Console.WriteLine("                GAME OVER                ");
-            Console.WriteLine("             THE MAN HAS HANGED          ");
-          
-            Console.WriteLine(GetHangingManArt());
-            Console.WriteLine($"\nThe word was: {word.ToUpperInvariant()}");
+            Console.WriteLine("\nGAME OVER ");
+            Console.WriteLine($"The word was: {word.ToUpper()}");
             Console.ResetColor();
         }
 
+
         public void ShowRoundSeparator()
         {
-            Console.WriteLine("\n-----------------------------------------\n");
+            Console.WriteLine("\n-----------------------------------------");
         }
 
         public void PromptNextAction()
         {
-            Console.WriteLine("\nPress Enter to play next word, or type X then Enter to exit.");
-        }
-
-        public string AskForLetter()
-        {
-            Console.Write("Guess a letter: ");
-            return Console.ReadLine() ?? string.Empty;
-        }
-
-        private string GetHappyManArt()
-        {
-            // A simple ASCII happy man picture
-            return @"
-      \o/      <-- happy!
-       |
-      / \
-     ( ^_^ )
-";
-        }
-
-        private string GetHangingManArt()
-        {
-            // A simple ASCII hanging man picture
-            return @"
-   _______
-   |     |
-   |     O
-   |    /|\
-   |    / \
-  _|_
- (R.I.P.)
-";
+            Console.WriteLine("\nPress ENTER to play again, or X to exit:");
         }
     }
 
-    // -----------------------
-    // CONTROLLER
-    // -----------------------
-    public class GameController
+    // ======================== CONTROLLER ========================
+    class GameController
     {
-        private readonly GameModel _model;
+        private readonly HangmanModel _model;
         private readonly ConsoleView _view;
 
-        public GameController(GameModel model, ConsoleView view)
+        public GameController(HangmanModel model, ConsoleView view)
         {
             _model = model;
             _view = view;
@@ -232,17 +191,20 @@ namespace HangmanMVC
         public void Run()
         {
             _view.ShowWelcome();
-
             bool exit = false;
+
             while (!exit)
             {
                 _model.StartNewWord();
+                _view.ShowClue(_model.CurrentClue); // show clue for new word
                 PlaySingleRound();
 
                 _view.ShowRoundSeparator();
                 _view.PromptNextAction();
+
                 string next = Console.ReadLine()?.Trim().ToLowerInvariant() ?? string.Empty;
-                if (next == "x") exit = true;
+                if (next == "x")
+                    exit = true;
                 else
                 {
                     Console.Clear();
@@ -250,7 +212,7 @@ namespace HangmanMVC
                 }
             }
 
-            Console.WriteLine("\nThanks for playing Hangman! Goodbye.");
+            Console.WriteLine("\nThanks for playing Hangman! Goodbye 👋");
         }
 
         private void PlaySingleRound()
@@ -276,56 +238,36 @@ namespace HangmanMVC
 
                 char guess = input[0];
 
-                // Already guessed checks
                 if (_model.CorrectGuesses.Contains(guess) || _model.WrongGuesses.Contains(guess))
                 {
                     _view.ShowAlreadyGuessed(guess);
                     continue;
                 }
 
-                bool wasCorrect = _model.ApplyGuess(guess);
-
-                if (!wasCorrect)
+                bool correct = _model.ApplyGuess(guess);
+                if (!correct)
                 {
-                    // wrong guess applied
                     _view.ShowGameState(_model.Revealed, _model.WrongGuesses, _model.WrongCount);
                 }
             }
 
-            // Round ended
             if (_model.IsWon())
-            {
                 _view.ShowSuccessBanner(_model.CurrentWord);
-            }
-            else if (_model.IsLost())
-            {
+            else
                 _view.ShowFailureBanner(_model.CurrentWord);
-            }
         }
     }
 
-    // -----------------------
-    // PROGRAM ENTRY
-    // -----------------------
+    // ======================== MAIN PROGRAM ========================
     class Program
     {
-        static void Main(string[] args)
+        static void Main()
         {
-            // Ensure console supports colors (most terminals do)
-            try
-            {
-                var model = new GameModel();
-                var view = new ConsoleView();
-                var controller = new GameController(model, view);
-                controller.Run();
-            }
-            catch (Exception ex)
-            {
-                Console.ResetColor();
-                Console.WriteLine("An unexpected error occurred: " + ex.Message);
-                Console.WriteLine("Press any key to exit...");
-                Console.ReadKey();
-            }
+            string csvPath = "words.csv";
+            var model = new HangmanModel(csvPath);
+            var view = new ConsoleView();
+            var controller = new GameController(model, view);
+            controller.Run();
         }
     }
 }
