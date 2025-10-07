@@ -1,13 +1,15 @@
-﻿using System;
+﻿//runs the game loop..manages the flow of game
+
+using System;
 
 namespace HangmanMVC
 {
     class GameController
     {
-        private readonly HangmanModel _model;
-        private readonly ConsoleView _view;
+        private readonly HangmanModel _model;//stores the game data (current word, guesses, rules)
+        private readonly ConsoleView _view;//handles display and input for the player
 
-        public GameController(HangmanModel model, ConsoleView view)
+        public GameController(HangmanModel model, ConsoleView view)//constructor for gamecontroller.links the controller to the data(model) and UI(view).
         {
             _model = model;
             _view = view;
