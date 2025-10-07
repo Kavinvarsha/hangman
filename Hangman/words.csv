@@ -1,47 +1,42 @@
-word,clue
-computer,machine
-hangman,game
-architecture,design
-programming,coding
-variable,storage
-function,method
-inheritance,oop
-polymorphism,override
-encapsulation,protection
-abstraction,simplify
-console,terminal
-application,software
-randomize,shuffle
-controller,manager
-view,display
-model,data
-exception,error
-threading,parallel
-dictionary,collection
-interface,contract
-delegate,callback
-namespace,scope
-algorithm,procedure
-iteration,loop
-recursion,repeat
 Word,Clue
-computer,used for coding
-elephant,largest land animal
-pyramid,ancient egyptian structure
-chocolate,sweet brown treat
-guitar,musical instrument
-rainbow,colorful sky arc
-river,flows through land
-mountain,high landform
-clock,shows time
-library,place full of books
-planet,celestial body
-butterfly,beautiful insect
-telephone,used for talking
-pizza,delicious Italian food
-camera,takes photos
-diamond,precious stone
-ocean,large body of water
-teacher,person who educates
-robot,machine that acts human
-garden,place with flowers
+puppy,A baby dog
+kitten,A baby cat
+bunny,A small fluffy rabbit
+panda,Black and white bear
+teddy,A stuffed toy bear
+cupcake,A small decorated cake
+cookie,A sweet baked snack
+donut,A sweet ring-shaped treat
+marshmallow,Soft fluffy candy
+candy,Sweet sugary treat
+sprinkle,Tiny colorful toppings
+cherry,Small red fruit
+strawberry,Red fruit with seeds outside
+peach,Soft fruit with a pit
+lemon,Yellow sour fruit
+rainbow,Colors after rain
+sparkle,Something that shines
+twinkle,What stars do at night
+butterfly,Colorful flying insect
+unicorn,A magical horse with a horn
+mermaid,Half girl, half fish
+daisy,A simple white flower
+sunflower,A tall yellow flower
+rose,A red romantic flower
+blossom,When a flower blooms
+cloud,White fluffy sky thing
+starlight,Light from stars
+moonlight,Light from the moon
+bubble,Round floating soap
+popsicle,Frozen juice on a stick
+pumpkin,Orange Halloween fruit
+gingerbread,Spiced holiday cookie
+fairy,A tiny magical being
+angel,A kind winged being
+sparkly,Something that shines bright
+sweetie,A cute nickname
+snuggle,A warm cozy hug
+hug,Wrapping arms with love
+smile,What you do when happy
+giggle,A small cute laugh
+dream,What you see when asleep
